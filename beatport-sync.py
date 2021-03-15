@@ -13,6 +13,7 @@ DOWNLOAD_URL = BASE_URL + 'api/v4/catalog/tracks/purchase-download?order_item_do
 LOGIN_URL = BASE_URL + 'account/login'
 CSRF_TOKEN = '_csrf_token'
 LOCAL_SETTINGS_LOCATION = '{0}/.beatport-sync.config'.format(os.path.expanduser('~'))
+DEFAULT_LOCAL_LIBRARY_LOCATION = '~/Music/beatport/'
 
 
 class SettingsKey():
@@ -64,7 +65,7 @@ def createDirectory(location):
             os.mkdir(path)
 
 def getLocalLibraryLocation():
-    location = getLocalSettings()[SettingsKey.LIBRARY_LOCATION]
+    location = getLocalSettings().get(SettingsKey.LIBRARY_LOCATION, DEFAULT_LOCAL_LIBRARY_LOCATION)
     if not os.path.exists(location):
         createDirectory(location)
     return location
@@ -122,7 +123,7 @@ def downloadTrack(trackId, session):
     print('Track ID {0} download finished.'.format(trackId))
 
 def getNumberOfThreads():
-    return 4
+    return getLocalSettings().get(SettingsKey.PARALLELISATION, 1)
 
 def downloadTracks(trackIds, session):
     with ThreadPoolExecutor(getNumberOfThreads()) as executor:
