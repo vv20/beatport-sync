@@ -9,9 +9,12 @@ BASE_URL = 'https://www.beatport.com/'
 LIBRARY_URL = BASE_URL + 'api/v4/my/downloads'
 DOWNLOAD_URL = BASE_URL + 'api/v4/catalog/tracks/purchase-download?order_item_download_id={}'
 LOGIN_URL = BASE_URL + 'account/login'
-LIBRARY_LOCATION = '/home/victor/Music/beatport/'
 CSRF_TOKEN = '_csrf_token'
+LOCAL_SETTINGS_LOCATION = '{0}/.beatport-sync.config'.format(os.path.expanduser('~'))
 
+
+class SettingsKey():
+    LIBRARY_LOCATION = 'LIBRARY_LOCATION'
 
 class CookieNotFoundException(Exception):
     pass
@@ -20,10 +23,27 @@ class LoginFailedException(Exception):
     pass
 
 
-def getLocalSettings():
-    return {
-            'LIBRARY_LOCATION': LIBRARY_LOCATION,
+def getLibraryLocation():
+    location = input('Location of your local Beatport library: ')
+    location = os.path.expanduser(location)
+    if not location.endswith('/'):
+        location += '/'
+    return location
+
+def createLocalSettings():
+    settings = {
+            SettingsKey.LIBRARY_LOCATION: getLibraryLocation(),
     }
+    with open(LOCAL_SETTINGS_LOCATION, 'x') as f:
+        f.write(json.dumps(settings))
+    return settings
+
+def getLocalSettings():
+    if not os.path.exists(LOCAL_SETTINGS_LOCATION):
+        print('Local settings not detected- creating settings configuration under {0}'.format(LOCAL_SETTINGS_LOCATION))
+        return createLocalSettings()
+    with open(LOCAL_SETTINGS_LOCATION, 'r') as f:
+        return json.loads(f.read())
 
 def createDirectory(location):
     print('Creating directory {0}...'.format(location))
@@ -35,7 +55,7 @@ def createDirectory(location):
             os.mkdir(path)
 
 def getLocalLibraryLocation():
-    location = getLocalSettings()['LIBRARY_LOCATION']
+    location = getLocalSettings()[SettingsKey.LIBRARY_LOCATION]
     if not os.path.exists(location):
         createDirectory(location)
     return location
