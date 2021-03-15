@@ -10,8 +10,6 @@ BASE_URL = 'https://www.beatport.com/'
 LIBRARY_URL = BASE_URL + 'api/v4/my/downloads'
 DOWNLOAD_URL = BASE_URL + 'api/v4/catalog/tracks/purchase-download?order_item_download_id={}'
 LOGIN_URL = BASE_URL + 'account/login'
-COOKIE_QUERY = 'SELECT * from moz_cookies WHERE host = "www.beatport.com";'
-COOKIE_LOCATION = '/home/victor/.mozilla/firefox/mwad0hks.default/cookies.sqlite'
 LIBRARY_LOCATION = '/home/victor/Music/beatport/'
 COMMON_HEADERS = {
         'Accept': 'application/json, text/plain, */*',
@@ -32,7 +30,6 @@ class LoginFailedException(Exception):
 def getLocalSettings():
     return {
             'LIBRARY_LOCATION': LIBRARY_LOCATION,
-            'COOKIE_LOCATION': COOKIE_LOCATION,
     }
 
 def createDirectory(location):
@@ -50,32 +47,11 @@ def getLocalLibraryLocation():
         createDirectory(location)
     return location
 
-def getLocalTracks(localLibraryLocation):
-    libraryLocation = getLocalLibraryLocation()
+def getLocalTracks(libraryLocation):
     filesInLib = os.listdir(libraryLocation)
     filesInLib = [f for f in filesInLib if f.endswith('.mp3')]
     tracks = [eyed3.load(libraryLocation + f) for f in filesInLib]
     return set([(track.tag.artist, track.tag.title) for track in tracks])
-
-def getCookieDirectory():
-    return getLocalSettings()['COOKIE_LOCATION']
-
-def getFirefoxCookie():
-    connection = sqlite3.connect(getCookieDirectory())
-    cursor = connection.cursor()
-    cookies = cursor.execute(COOKIE_QUERY).fetchall()
-    cookie = None
-    if len(cookies) > 0:
-        cookie = cookies[0]
-    cursor.close()
-    connection.close()
-    return cookie[3]
-
-def getCSRFToken():
-    token = getFirefoxCookie()
-    if not token:
-        raise CookieNotFoundException()
-    return token
 
 def getUsername():
     return input('Beatport username: ')
@@ -85,10 +61,6 @@ def getPassword():
 
 def loginToBeatport(session):
     print('Logging in to Beatport...')
-    csrfToken = getCSRFToken()
-    cookies = {
-            CSRF_TOKEN: csrfToken
-    }
     session.get(LOGIN_URL, headers=COMMON_HEADERS)
     headers = copy.copy(COMMON_HEADERS)
     headers['Referer'] = 'https://www.beatport.com/account/login?next=%2Flibrary%2Fdownloads'
@@ -113,12 +85,12 @@ def getId(download):
     return download['order_item_download_id']
 
 def getRemoteTracks(session):
-    loginToBeatport(session)
     response = session.get(LIBRARY_URL, headers=COMMON_HEADERS)
     downloads = json.loads(response.content)['results']
     return {(getArtist(download), getTitle(download)): getId(download) for download in downloads}
 
 def downloadTrack(trackId, session):
+    print('downloading track ID {0}'.format(trackId))
     response = session.get(DOWNLOAD_URL.format(trackId), headers=COMMON_HEADERS)
     downloadUrl = json.loads(response.content)['download_url']
     response = session.get(downloadUrl, headers=COMMON_HEADERS)
@@ -131,6 +103,7 @@ def downloadTracks(trackIds, session):
 
 def main():
     session = requests.Session()
+    loginToBeatport(session)
     localLibraryLocation = getLocalLibraryLocation()
     localTracks = getLocalTracks(localLibraryLocation)
     remoteTracks = getRemoteTracks(session)
