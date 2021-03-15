@@ -4,6 +4,8 @@ import getpass
 import json
 import os
 import requests
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 BASE_URL = 'https://www.beatport.com/'
 LIBRARY_URL = BASE_URL + 'api/v4/my/downloads'
@@ -104,16 +106,23 @@ def getRemoteTracks(session):
     return {(getArtist(download), getTitle(download)): getId(download) for download in downloads}
 
 def downloadTrack(trackId, session):
-    print('downloading track ID {0}'.format(trackId))
+    print('Downloading track ID {0}'.format(trackId))
     response = session.get(DOWNLOAD_URL.format(trackId))
     downloadUrl = json.loads(response.content)['download_url']
     response = session.get(downloadUrl)
     with open(getLocalLibraryLocation() + str(trackId) + '.mp3', 'xb') as dest:
         dest.write(response.content)
+    print('Track ID {0} download finished.'.format(trackId))
+
+def getNumberOfThreads():
+    return 4
 
 def downloadTracks(trackIds, session):
-    for trackId in trackIds:
-        downloadTrack(trackId, session)
+    with ThreadPoolExecutor(getNumberOfThreads()) as executor:
+        futures = [executor.submit(downloadTrack, trackId, session) for trackId in trackIds]
+        while not all([future.done() for future in futures]):
+            print('Receiving data...')
+            time.sleep(1)
 
 def main():
     session = requests.Session()
