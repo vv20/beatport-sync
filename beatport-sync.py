@@ -17,6 +17,7 @@ LOCAL_SETTINGS_LOCATION = '{0}/.beatport-sync.config'.format(os.path.expanduser(
 
 class SettingsKey():
     LIBRARY_LOCATION = 'LIBRARY_LOCATION'
+    PARALLELISATION = 'PARALLELISATION'
 
 class CookieNotFoundException(Exception):
     pass
@@ -32,9 +33,15 @@ def getLibraryLocation():
         location += '/'
     return location
 
+def getParallelisation():
+    noOfThreads = input('How many tracks would you like to be able to download in parallel (number of threads)? ')
+    noOfThreads = int(noOfThreads)
+    return noOfThreads
+
 def createLocalSettings():
     settings = {
             SettingsKey.LIBRARY_LOCATION: getLibraryLocation(),
+            SettingsKey.PARALLELISATION: getParallelisation(),
     }
     with open(LOCAL_SETTINGS_LOCATION, 'x') as f:
         f.write(json.dumps(settings))
