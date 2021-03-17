@@ -20,9 +20,6 @@ class SettingsKey():
     LIBRARY_LOCATION = 'LIBRARY_LOCATION'
     PARALLELISATION = 'PARALLELISATION'
 
-class CookieNotFoundException(Exception):
-    pass
-
 class LoginFailedException(Exception):
     pass
 
