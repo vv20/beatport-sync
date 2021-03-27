@@ -3,7 +3,7 @@ This is a handy script that checks the list of music tracks in the pre-configure
 
 ## Installation
 
-Running the following script will install the command under ./local.bin
+Running the following script will install the command under ./local/bin
 
 ```shell
 ./install.sh
