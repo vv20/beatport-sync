@@ -2,13 +2,15 @@ import copy
 import eyed3
 import getpass
 import json
+import math
 import os
 import requests
 import time
 from concurrent.futures import ThreadPoolExecutor
 
 BASE_URL = 'https://www.beatport.com/'
-LIBRARY_URL = BASE_URL + 'api/v4/my/downloads'
+PER_PAGE = 10
+LIBRARY_URL = BASE_URL + 'api/v4/my/downloads?page={0}&per_page=' + str(PER_PAGE)
 DOWNLOAD_URL = BASE_URL + 'api/v4/catalog/tracks/purchase-download?order_item_download_id={}'
 LOGIN_URL = BASE_URL + 'account/login'
 CSRF_TOKEN = '_csrf_token'
@@ -90,11 +92,6 @@ def loginToBeatport(session):
         'username': getUsername(),
         'password': getPassword()
     })
-    if response.status_code < 400:
-        print('Login successful')
-    else:
-        print('Login failed')
-        raise LoginFailedException()
 
 def getArtist(download):
     return download['artists'][0]['name']
@@ -106,8 +103,13 @@ def getId(download):
     return download['order_item_download_id']
 
 def getRemoteTracks(session):
-    response = session.get(LIBRARY_URL)
-    downloads = json.loads(response.content)['results']
+    response = json.loads(session.get(LIBRARY_URL.format(1)).content)
+    count = response['count']
+    downloads = response['results']
+    noOfPages = math.ceil(count / PER_PAGE)
+    for i in range(2, noOfPages + 1):
+        response = json.loads(session.get(LIBRARY_URL.format(i)).content)
+        downloads += response['results']
     return {(getArtist(download), getTitle(download)): getId(download) for download in downloads}
 
 def downloadTrack(trackId, session):
