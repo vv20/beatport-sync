@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import copy
 import eyed3
 import getpass
